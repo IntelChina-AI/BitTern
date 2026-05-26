@@ -1,2 +1,2 @@
 # BitTern
-Low-cost, differentiable and accurate 1.58-bit post-training quantization that flexibly scales across diverse reasoning tasks, model architectures and scales
+Low-cost and accurate 1.58-bit post-training quantization technology that flexibly scales across diverse LLM architectures, model scales and reasoning tasks.
