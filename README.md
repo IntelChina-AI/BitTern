@@ -1,2 +1,2 @@
-# BitTern
-Low-cost and accurate 1.58-bit post-training quantization technology that flexibly scales across diverse LLM architectures, model scales and reasoning tasks.
+BitTern aims to provide low-cost and accurate post-training ternary quantization tools, and 1.58-bit models across diverse architectures, model scales and reasoning tasks, in PyTorch. The goal is to lower the extremely high cost barrier to develop ternary models, enabling  
+everyone can contribute to and benefit from shared models. 
