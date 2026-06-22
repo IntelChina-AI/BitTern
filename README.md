@@ -15,5 +15,5 @@
 
 ## Latest News
 
-- `[Planning]` We are in the process of open-sourcing **CAT-Q**.
+- `[Stay tuned]` We are in the process of open-sourcing **CAT-Q**.
 - `[01/05/2026]`: 🎉🎉🎉**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs** is accepted to ICML 2026 as an oral.
