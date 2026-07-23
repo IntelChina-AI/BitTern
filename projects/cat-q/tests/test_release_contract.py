@@ -29,10 +29,24 @@ class EvaluationReleaseContractTest(unittest.TestCase):
         self.assertEqual(args.wbits, 1)
         self.assertEqual(args.r, 64)
         self.assertTrue(args.learnable_scale)
+        self.assertTrue(args.init_scale_from_raw_weights)
         self.assertIn("batch_size", args.ignored_config_keys)
         self.assertIn("epochs", args.ignored_config_keys)
         self.assertIn("lora_quant", args.ignored_config_keys)
         self.assertIn("loss_function", args.ignored_config_keys)
+
+    def test_raw_weight_scale_initialization_is_disabled_by_default(self):
+        args = parse_arguments(
+            [
+                "--config",
+                str(ROOT / "configs" / "qwen3-8b" / "config.yaml"),
+                "--checkpoint",
+                "/tmp/parameters.pth",
+                "--tasks",
+                "piqa",
+            ]
+        )
+        self.assertFalse(args.init_scale_from_raw_weights)
 
     def test_unknown_yaml_fields_are_ignored_for_forward_compatibility(self):
         with tempfile.NamedTemporaryFile("w", suffix=".yaml") as config:

@@ -17,6 +17,7 @@ def _set_quantizer_options(args):
         "disable_zero_point": args.disable_zero_point,
         "drop_quant_mu": args.drop_quant_mu,
         "ter_scale_type": args.ter_scale_type,
+        "init_scale_from_raw_weights": args.init_scale_from_raw_weights,
         "shift_mu": args.shift_mu,
         "learnable_scale": args.learnable_scale,
         "learnable_mu": args.learnable_mu,

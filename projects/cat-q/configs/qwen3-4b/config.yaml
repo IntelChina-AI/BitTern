@@ -32,6 +32,7 @@ learnable_mu: true
 learnable_round: true
 shift_mu: true
 drop_quant_mu: true
+init_scale_from_raw_weights: true
 
 # Sliding-layer reconstruction
 num_layer: 4

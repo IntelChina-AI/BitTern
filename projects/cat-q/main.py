@@ -54,6 +54,11 @@ def build_parser():
     parser.add_argument("--only_lora_gate", action="store_true")
     parser.add_argument("--drop_quant_mu", action="store_true")
     parser.add_argument("--ter_scale_type", choices=["absmean", "variance"], default="absmean")
+    parser.add_argument(
+        "--init_scale_from_raw_weights",
+        action="store_true",
+        help="Initialize the ternary scale without subtracting the group mean",
+    )
     parser.add_argument("--shift_mu", action="store_true")
     parser.add_argument("--learnable_scale", action="store_true")
     parser.add_argument("--learnable_mu", action="store_true")
