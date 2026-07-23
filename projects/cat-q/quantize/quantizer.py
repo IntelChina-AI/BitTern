@@ -96,11 +96,11 @@ class TernaryQuantizer(nn.Module):
         original_shape = weight.shape
         grouped = weight.reshape(-1, self.group_size)
         mean = grouped.mean(dim=-1, keepdim=True) if self.shift_mu else grouped.new_zeros((grouped.shape[0], 1))
-        scale_values = grouped if self.init_scale_from_raw_weights else grouped - mean
         if self.ter_scale_type == "absmean":
-            scale = scale_values.abs().mean(dim=-1, keepdim=True) + 1e-6
+            absmean_values = grouped if self.init_scale_from_raw_weights else grouped - mean
+            scale = absmean_values.abs().mean(dim=-1, keepdim=True) + 1e-6
         elif self.ter_scale_type == "variance":
-            scale = scale_values.std(dim=-1, keepdim=True, unbiased=False) + 1e-6
+            scale = grouped.std(dim=-1, keepdim=True, unbiased=False) + 1e-6
         else:
             raise ValueError(f"Unsupported ternary scale type: {self.ter_scale_type}")
 

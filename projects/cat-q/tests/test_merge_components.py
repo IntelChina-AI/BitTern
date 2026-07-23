@@ -50,6 +50,27 @@ class MergeComponentTest(unittest.TestCase):
             torch.tensor([[0.0, 4.0, 4.0, 8.0]]),
         )
 
+    def test_variance_scale_initialization_ignores_raw_weight_switch(self):
+        from quantize.quantizer import TernaryQuantizer
+
+        weight = torch.tensor([[1.0, 2.0, 3.0, 10.0]])
+        default_quantizer = TernaryQuantizer(
+            self._ternary_params(ter_scale_type="variance"),
+            shape=weight.shape,
+        )
+        raw_quantizer = TernaryQuantizer(
+            self._ternary_params(
+                ter_scale_type="variance",
+                init_scale_from_raw_weights=True,
+            ),
+            shape=weight.shape,
+        )
+
+        torch.testing.assert_close(
+            default_quantizer(weight),
+            raw_quantizer(weight),
+        )
+
     def test_lora_and_ternary_checkpoint_key_schema(self):
         from quantize.int_linear_lora import LoRAQuantLinear
 
