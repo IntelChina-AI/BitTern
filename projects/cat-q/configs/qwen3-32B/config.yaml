@@ -1,0 +1,53 @@
+# Model and quantization
+model: Qwen/Qwen3-32B
+wbits: 1
+abits: 16
+group_size: 128
+quant_mode: cat-q
+use_scaling: false
+
+# Calibration and training
+epochs: 60
+nsamples: 512
+batch_size: 2
+inference_batch_size: 12
+seed: 2
+calib_dataset: c4
+test_datasets: wikitext2,c4
+eval_ppl: true
+use_bfloat16: true
+fp16_act: false
+low_memory: true
+low_cpu_memory: false
+
+# CAT-Q ternarization
+grad_clip: 1.0
+loss_function: huber
+fill_window_size: 4
+init_round_thd: 0.5
+progressive_ratio: 0.8
+phi_x_n: 3
+s0: 30.0
+learnable_factor_act: sigmoid
+learnable_scale: true
+learnable_mu: true
+learnable_round: true
+shift_mu: true
+drop_quant_mu: true
+
+# Sliding-layer reconstruction
+num_layer: 4
+sliding_layer: 2
+use_fp_inp_loss: false
+use_quant_tar_loss: false
+last_round_inp_num: 1
+quant_step: 1
+
+# LoRA refinement is enabled whenever r > 0 in cat-q mode.
+r: 256
+lora_quant: true
+
+# Optimizer
+lora_lr: 0.0015
+learnable_factor_lr: 0.008
+warmup_ratio: 0.0
