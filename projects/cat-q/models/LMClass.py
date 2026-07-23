@@ -30,8 +30,6 @@ class LMClass:
             trust_remote_code=args.trust_remote_code,
         )
         self.model.eval()
-        self.seqlen = self.model.config.max_position_embeddings
-        self.vocab_size = self.tokenizer.vocab_size
 
     @property
     def device(self):

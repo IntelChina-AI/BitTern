@@ -13,8 +13,6 @@ batch_size: 6
 inference_batch_size: 12
 seed: 2
 calib_dataset: c4
-test_datasets: wikitext2,c4
-eval_ppl: true
 use_bfloat16: true
 fp16_act: false
 low_memory: true

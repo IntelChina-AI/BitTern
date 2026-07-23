@@ -1,5 +1,5 @@
 # Model and quantization
-model: Qwen/Qwen3-32B
+model: Qwen/Qwen3-1.7B
 wbits: 1
 abits: 16
 group_size: 128
@@ -9,7 +9,7 @@ use_scaling: false
 # Calibration and training
 epochs: 60
 nsamples: 512
-batch_size: 2
+batch_size: 9
 inference_batch_size: 12
 seed: 2
 calib_dataset: c4
@@ -42,10 +42,10 @@ last_round_inp_num: 1
 quant_step: 1
 
 # LoRA refinement is enabled whenever r > 0 in cat-q mode.
-r: 256
+r: 64
 lora_quant: true
 
 # Optimizer
-lora_lr: 0.0015
-learnable_factor_lr: 0.008
+lora_lr: 0.0003
+learnable_factor_lr: 0.0015
 warmup_ratio: 0.0

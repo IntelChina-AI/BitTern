@@ -21,7 +21,8 @@ class EvaluationReleaseContractTest(unittest.TestCase):
                 str(config_path),
                 "--checkpoint",
                 "/tmp/parameters.pth",
-                "--eval_ppl",
+                "--tasks",
+                "piqa",
             ]
         )
         self.assertEqual(args.model, "Qwen/Qwen3-4B")
@@ -52,7 +53,8 @@ class EvaluationReleaseContractTest(unittest.TestCase):
                             "base/model",
                             "--checkpoint",
                             "/tmp/parameters.pth",
-                            "--eval_ppl",
+                            "--tasks",
+                            "piqa",
                             flag,
                             "1",
                         ]
@@ -60,13 +62,42 @@ class EvaluationReleaseContractTest(unittest.TestCase):
 
     def test_checkpoint_and_action_are_required(self):
         with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
-            parse_arguments(["--model", "base/model", "--eval_ppl"])
+            parse_arguments(["--model", "base/model", "--tasks", "piqa"])
         with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
             parse_arguments(["--model", "base/model", "--checkpoint", "/tmp/parameters.pth"])
 
+    def test_perplexity_cli_flags_are_not_exposed(self):
+        for flag in ("--eval_ppl", "--test_datasets", "--cache_dir", "--seqlen"):
+            with self.subTest(flag=flag), mock.patch("sys.stderr"):
+                with self.assertRaises(SystemExit):
+                    parse_arguments(
+                        [
+                            "--model",
+                            "base/model",
+                            "--checkpoint",
+                            "/tmp/parameters.pth",
+                            "--tasks",
+                            "piqa",
+                            flag,
+                        ]
+                    )
+
     def test_training_sources_are_absent(self):
-        for relative in ("auto_train_ddp.sh", "train_utils.py", "quantize/catq.py"):
+        for relative in ("auto_train_ddp.sh", "train_utils.py", "quantize/catq.py", "datautils.py"):
             self.assertFalse((ROOT / relative).exists(), relative)
+
+    def test_removed_evaluation_paths_are_absent(self):
+        forbidden = ("eval_ppl", "test_datasets", "boolq", "avg-6")
+        source_suffixes = {".conf", ".md", ".py", ".sh", ".toml", ".yaml", ".yml"}
+        for path in ROOT.rglob("*"):
+            if not path.is_file() or path.suffix not in source_suffixes:
+                continue
+            if "tests" in path.parts:
+                continue
+            source = path.read_text()
+            for marker in forbidden:
+                with self.subTest(path=path, marker=marker):
+                    self.assertNotIn(marker, source)
 
     def test_production_python_has_no_training_runtime(self):
         forbidden = (

@@ -23,7 +23,6 @@ def build_parser():
         help="CAT-Q parameters.pth",
     )
     parser.add_argument("--output_dir", type=str, default="./outputs/eval")
-    parser.add_argument("--cache_dir", type=str, default="./cache")
     parser.add_argument(
         "--export_model_path",
         type=str,
@@ -39,11 +38,8 @@ def build_parser():
     )
 
     parser.add_argument("--tasks", type=str, default="")
-    parser.add_argument("--eval_ppl", action="store_true")
-    parser.add_argument("--test_datasets", type=str, default="wikitext2,c4")
     parser.add_argument("--lm_eval_batch_size", type=str, default="auto:4")
     parser.add_argument("--limit", type=int, default=-1)
-    parser.add_argument("--seqlen", type=int, default=2048)
     parser.add_argument("--seed", type=int, default=2)
     parser.add_argument("--parallelize", action="store_true")
 
@@ -111,8 +107,8 @@ def parse_arguments(argv=None):
         parser.error("--model is required (directly or through --config)")
     if not args.checkpoint:
         parser.error("--checkpoint is required")
-    if not args.eval_ppl and not args.tasks and not args.export_model_path:
-        parser.error("select at least one action: --eval_ppl, --tasks, or --export_model_path")
+    if not args.tasks and not args.export_model_path:
+        parser.error("select at least one action: --tasks or --export_model_path")
     args.ignored_config_keys = ignored_config_keys
     return args
 
@@ -133,7 +129,6 @@ def main(argv=None):
     torch.manual_seed(args.seed)
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    Path(args.cache_dir).mkdir(parents=True, exist_ok=True)
     logger = utils.create_logger(Path(args.output_dir))
     logger.info(args)
     if args.ignored_config_keys:
@@ -147,7 +142,6 @@ def main(argv=None):
     args.quant_rate = 1.0
 
     lm = LMClass(args)
-    lm.seqlen = args.seqlen
     merge_catq_checkpoint(lm, args, logger)
 
     if args.export_model_path:
@@ -157,7 +151,7 @@ def main(argv=None):
         lm.tokenizer.save_pretrained(export_dir)
         logger.info("Saved fake-quantized Hugging Face model to %s", export_dir)
 
-    if args.eval_ppl or args.tasks:
+    if args.tasks:
         evaluate(lm, args, logger)
 
 

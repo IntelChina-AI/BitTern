@@ -15,6 +15,7 @@ This repository contains the official implementation of **CAT-Q**, accepted as a
 
 ## Latest News
 
+- `[Stay tuned]` We are preparing to release the CAT-Q training code.
 - `[22/07/2026]` We release the CAT-Q model checkpoints, inference, and evaluation code.
 - `[25/06/2026]` The [CAT-Q paper](https://arxiv.org/abs/2606.26650) is available on arXiv.
 - `[01/05/2026]` 🎉🎉🎉**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs** is accepted to ICML 2026 as an oral.
@@ -77,6 +78,7 @@ The following W1.58A16 checkpoints are available on Hugging Face:
 | Model | Architecture | Hugging Face |
 | --- | --- | --- |
 | Llama2-7B | Dense | [llama2-7b](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/llama2-7b) |
+| Qwen3-1.7B | Dense | [qwen3-1.7b](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/qwen3-1.7b) |
 | Qwen3-4B | Dense | [qwen3-4b](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/qwen3-4b) |
 | Qwen3-8B | Dense | [qwen3-8b](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/qwen3-8b) |
 | Qwen3-14B | Dense | [qwen3-14B](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/qwen3-14B) |
@@ -121,7 +123,7 @@ This release provides CAT-Q model checkpoints, inference code, and evaluation co
    ./auto_test_one.sh
    ```
 
-The launcher evaluates WikiText-2 and C4 perplexity together with the configured `lm-eval` tasks. Llama 2 requires access to the gated `meta-llama/Llama-2-7b-hf` repository.
+The launcher evaluates PIQA, ARC-Easy, ARC-Challenge, HellaSwag, and Winogrande through `lm-eval`, then writes the five per-task accuracies and their `avg-5` average to `results.csv`. Llama 2 requires access to the gated `meta-llama/Llama-2-7b-hf` repository.
 
 ## Hugging Face Export
 

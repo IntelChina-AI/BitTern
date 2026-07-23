@@ -1,30 +1,21 @@
-"""Perplexity and lm-eval entry points for merged CAT-Q models."""
+"""lm-eval entry point for merged CAT-Q models."""
 
 import csv
 import os
 import torch
-import torch.nn.functional as F
 from accelerate import dispatch_model, infer_auto_device_map
 from accelerate.utils import get_balanced_memory
-from tqdm import tqdm
 
-from datautils import get_test_loader
 from parallel_utils import get_max_memory_map
 
 
 AVG5_TASKS = ("piqa", "arc_easy", "arc_challenge", "hellaswag", "winogrande")
-AVG6_TASKS = (*AVG5_TASKS[:3], "boolq", *AVG5_TASKS[3:])
 
 
-def _add_downstream_averages(metrics):
+def _add_downstream_average(metrics):
     if all(task in metrics for task in AVG5_TASKS):
         metrics["avg-5"] = round(
             sum(metrics[task] for task in AVG5_TASKS) / len(AVG5_TASKS),
-            4,
-        )
-    if all(task in metrics for task in AVG6_TASKS):
-        metrics["avg-6"] = round(
-            sum(metrics[task] for task in AVG6_TASKS) / len(AVG6_TASKS),
             4,
         )
 
@@ -52,43 +43,6 @@ def _place_model(lm, args, logger):
         lm.model = dispatch_model(lm.model, device_map=device_map)
     else:
         lm.model = lm.model.to(lm.device)
-
-
-@torch.no_grad()
-def _evaluate_perplexity(lm, args, logger):
-    results = {}
-    for dataset in args.test_datasets.split(","):
-        dataset = dataset.strip()
-        cache_path = os.path.join(args.cache_dir, f"testloader_{args.net}_{dataset}_all.cache")
-        if os.path.exists(cache_path):
-            tokens = torch.load(cache_path, map_location="cpu", weights_only=True)
-        else:
-            tokens = get_test_loader(dataset, lm.tokenizer, lm.seqlen)
-            torch.save(tokens, cache_path)
-
-        sample_count = tokens.numel() // lm.seqlen
-        if args.limit >= 0:
-            sample_count = min(sample_count, args.limit + 1)
-        old_use_cache = lm.model.config.use_cache
-        lm.model.config.use_cache = False
-        losses = []
-        for index in tqdm(range(sample_count), desc=f"PPL {dataset}"):
-            batch = tokens[:, index * lm.seqlen : (index + 1) * lm.seqlen].to(lm.device)
-            outputs = lm.model(batch)
-            logits = outputs.logits
-            labels = batch[:, 1:].to(logits.device)
-            loss = F.cross_entropy(
-                logits[:, :-1, :].reshape(-1, logits.shape[-1]),
-                labels.reshape(-1),
-            )
-            losses.append(loss.float() * (lm.seqlen - 1))
-        if not losses:
-            raise ValueError(f"Dataset {dataset} contains fewer than {lm.seqlen} tokens")
-        ppl = torch.exp(torch.stack(losses).sum() / (sample_count * (lm.seqlen - 1))).item()
-        lm.model.config.use_cache = old_use_cache
-        results[dataset] = ppl
-        logger.info("%s perplexity: %.6f", dataset, ppl)
-    return results
 
 
 def _evaluate_tasks(lm, args, logger):
@@ -127,7 +81,7 @@ def _evaluate_tasks(lm, args, logger):
         task: round(result.get("acc_norm,none", result.get("acc,none")), 4)
         for task, result in raw.items()
     }
-    _add_downstream_averages(metrics)
+    _add_downstream_average(metrics)
     logger.info("Downstream metrics: %s", metrics)
     return metrics
 
@@ -135,13 +89,10 @@ def _evaluate_tasks(lm, args, logger):
 @torch.no_grad()
 def evaluate(lm, args, logger):
     _place_model(lm, args, logger)
-    results = _evaluate_perplexity(lm, args, logger) if args.eval_ppl else {}
-    if args.tasks:
-        results.update(_evaluate_tasks(lm, args, logger))
-    if results:
-        result_path = os.path.join(args.output_dir, "results.csv")
-        with open(result_path, "w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=results)
-            writer.writeheader()
-            writer.writerow(results)
+    results = _evaluate_tasks(lm, args, logger)
+    result_path = os.path.join(args.output_dir, "results.csv")
+    with open(result_path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=results)
+        writer.writeheader()
+        writer.writerow(results)
     return results

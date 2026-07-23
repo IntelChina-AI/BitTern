@@ -24,6 +24,5 @@ python main.py \
   --config "${config_path}" \
   --output_dir "${result_dir}" \
   --lm_eval_batch_size auto:4 \
-  --tasks piqa,arc_easy,arc_challenge,boolq,hellaswag,winogrande \
-  --eval_ppl \
+  --tasks piqa,arc_easy,arc_challenge,hellaswag,winogrande \
   --checkpoint "${checkpoint_path}"
