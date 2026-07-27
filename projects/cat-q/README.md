@@ -88,6 +88,8 @@ The following W1.58A16 checkpoints are available on Hugging Face:
 
 All checkpoints are hosted under [IntelLabsChina/CAT-Q](https://huggingface.co/IntelLabsChina/CAT-Q).
 
+> **Note:** The code was refactored for open-source release, so checkpoint accuracy may differ slightly from the paper results (typically within ±0.2 percentage points).
+
 ## Installation
 
 ```bash
