@@ -1,0 +1,53 @@
+# Python and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+build/
+dist/
+
+# Private maintenance documents (never copy to the public repository)
+AGENTS.md
+RELEASE_CHECKLIST.md
+
+# Local environments and credentials
+.venv*/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Models, datasets, caches, and generated statistics
+model_zoo/
+datasets_local/
+cache/
+checkpoints/
+rotate_models/
+pre_quantized_models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Experiment and export outputs
+log/
+log-*/
+logs/
+outputs/
+results/
+exports/
+output/
+deploy/
+*.npy
+configs/**/args.yaml
+configs/**/*.csv
+configs/**/*.log
+
+model_zoo
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
