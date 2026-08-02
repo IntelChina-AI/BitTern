@@ -22,5 +22,5 @@
 ## Latest News
 
 - `[Stay tuned]` We are preparing to release the CAT-Q training code.
-- `[22/07/2026]` The [CAT-Q](projects/cat-q) model checkpoints, inference, and evaluation code are now available.
+- `[22/07/2026]` The [CAT-Q](projects/cat-q) model checkpoints (including Qwen3-1.7B/4B/8B/14B/32B, Llama2-7B, Qwen3-30B-A3B and Qwen3-235B-A22B), inference, and evaluation code are now available.
 - `[01/05/2026]` 🎉🎉🎉**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs** is accepted to ICML 2026 as an oral.
