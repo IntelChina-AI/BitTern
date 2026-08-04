@@ -21,7 +21,7 @@
 
 ## Latest News
 
-- `[Stay tuned]` We are preparing to release compelling 1.58-bit reasoning LLMs for a wide range of complex reasoning tasks, the CAT-Q training code, etc.
+- `[Stay tuned]` We are preparing to release the CAT-Q training code, etc. 
 - `[04/08/2026]` [The technical report](https://arxiv.org/abs/2608.01078) "**Attend to Your Own Thoughts: Breaking the Barrier for Post-Training Quantization of Reasoning LLMs through the Lens of 1.58-Bit Quantization**" is now available on arXiv.
 - `[22/07/2026]` The [CAT-Q](projects/cat-q) model checkpoints (including Qwen3-1.7B/4B/8B/14B/32B, Llama2-7B, Qwen3-30B-A3B and Qwen3-235B-A22B), inference, and evaluation code are now available.
 - `[25/06/2026]` [The CAT-Q paper](https://arxiv.org/abs/2606.26650) is now available on arXiv.
