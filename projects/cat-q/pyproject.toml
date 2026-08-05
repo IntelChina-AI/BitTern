@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "catq"
 version = "0.1.0"
-description = "Evaluation and fake-quantized Hugging Face export for released CAT-Q checkpoints."
+description = "Evaluation, fake-quantized Hugging Face export and packed ternary GGUF export for released CAT-Q checkpoints."
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.10,<3.11"
@@ -19,6 +19,7 @@ classifiers = [
 dependencies = [
     "accelerate>=0.30.0,<2.0.0",
     "datasets==2.18.0",
+    "gguf>=0.17.0",
     "huggingface-hub==0.32.4",
     "lm-eval==0.4.7",
     "numpy>=1.26.0",

@@ -7,7 +7,10 @@ import yaml
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Load released CAT-Q parameters for evaluation or fake-quantized Hugging Face export."
+        description=(
+            "Load released CAT-Q parameters for evaluation, fake-quantized Hugging Face "
+            "export, or packed ternary GGUF export."
+        )
     )
     parser.add_argument(
         "--config",
@@ -28,6 +31,21 @@ def build_parser():
         type=str,
         default=None,
         help="Directory for the fake-quantized HF model",
+    )
+    parser.add_argument(
+        "--export_gguf_path",
+        type=str,
+        default=None,
+        help=(
+            "Where to write the packed ternary GGUF: a .gguf file, or a directory "
+            "in which <net>-catq-q2_0.gguf is created"
+        ),
+    )
+    parser.add_argument(
+        "--gguf_float_type",
+        choices=["f16", "bf16", "f32"],
+        default="f16",
+        help="Dtype for the GGUF tensors CAT-Q keeps in floating point",
     )
     parser.add_argument("--net", type=str, default=None)
     parser.add_argument(
@@ -112,10 +130,26 @@ def parse_arguments(argv=None):
         parser.error("--model is required (directly or through --config)")
     if not args.checkpoint:
         parser.error("--checkpoint is required")
-    if not args.tasks and not args.export_model_path:
-        parser.error("select at least one action: --tasks or --export_model_path")
+    if not args.tasks and not args.export_model_path and not args.export_gguf_path:
+        parser.error("select at least one action: --tasks, --export_model_path, or --export_gguf_path")
     args.ignored_config_keys = ignored_config_keys
     return args
+
+
+def _save_hf_model(lm, directory, logger):
+    directory.mkdir(parents=True, exist_ok=True)
+    lm.model.save_pretrained(directory)
+    lm.tokenizer.save_pretrained(directory)
+    logger.info("Saved fake-quantized Hugging Face model to %s", directory)
+
+
+def _gguf_outfile(args):
+    path = Path(args.export_gguf_path)
+    if path.suffix == ".gguf":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+    path.mkdir(parents=True, exist_ok=True)
+    return path / f"{args.net}-catq-q2_0.gguf"
 
 
 def main(argv=None):
@@ -146,15 +180,22 @@ def main(argv=None):
         args.net = args.model.rstrip("/").split("/")[-1]
     args.quant_rate = 1.0
 
+    exporter = None
+    if args.export_gguf_path:
+        from quantize.gguf_export import TernaryGGUFExporter
+
+        exporter = TernaryGGUFExporter(
+            args.model, _gguf_outfile(args), float_type=args.gguf_float_type
+        )
+
     lm = LMClass(args)
-    merge_catq_checkpoint(lm, args, logger)
+    merge_catq_checkpoint(lm, args, logger, ternary_sink=exporter.capture if exporter else None)
 
     if args.export_model_path:
-        export_dir = Path(args.export_model_path)
-        export_dir.mkdir(parents=True, exist_ok=True)
-        lm.model.save_pretrained(export_dir)
-        lm.tokenizer.save_pretrained(export_dir)
-        logger.info("Saved fake-quantized Hugging Face model to %s", export_dir)
+        _save_hf_model(lm, Path(args.export_model_path), logger)
+
+    if exporter is not None:
+        logger.info("Saved packed ternary model to %s", exporter.write(lm.model))
 
     if args.tasks:
         evaluate(lm, args, logger)

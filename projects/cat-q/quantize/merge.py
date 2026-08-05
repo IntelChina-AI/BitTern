@@ -120,11 +120,17 @@ def _filter_inert_quantizer_bounds(layer_parameters, qlayer):
 
 
 @torch.no_grad()
-def merge_catq_checkpoint(lm, args, logger):
-    """Restore released per-layer parameters and merge them into native HF weights."""
-    if args.use_scaling and args.export_model_path:
+def merge_catq_checkpoint(lm, args, logger, ternary_sink=None):
+    """Restore released per-layer parameters and merge them into native HF weights.
+
+    `ternary_sink(layer_id, qlayer)` is called for every restored layer just
+    before its weights are folded into floating point, which is the only point
+    where the ternary codes and per-group scales are still available (see
+    `quantize.ternary_export`).
+    """
+    if args.use_scaling and (args.export_model_path or ternary_sink is not None):
         raise ValueError(
-            "Native Hugging Face export currently requires use_scaling: false; "
+            "Model export currently requires use_scaling: false; "
             "equivalent-scaling checkpoints remain supported for evaluation."
         )
     _set_quantizer_options(args)
@@ -177,6 +183,8 @@ def merge_catq_checkpoint(lm, args, logger):
             )
 
         qlayer.float()
+        if ternary_sink is not None:
+            ternary_sink(layer_id, qlayer)
         qlayer.update_quant_mode("weight_merge", args=args)
         if args.use_scaling:
             layers[layer_id] = qlayer.to(dtype=dtype)
