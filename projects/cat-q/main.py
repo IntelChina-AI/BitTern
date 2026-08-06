@@ -47,6 +47,15 @@ def build_parser():
         default="f16",
         help="Dtype for the GGUF tensors CAT-Q keeps in floating point",
     )
+    parser.add_argument(
+        "--gguf_low_memory",
+        action="store_true",
+        help=(
+            "Free each 16-bit weight as soon as it has been packed and spool the "
+            "GGUF through a temporary file; needed for models that do not fit in "
+            "host memory twice. Cannot be combined with --tasks or --export_model_path"
+        ),
+    )
     parser.add_argument("--net", type=str, default=None)
     parser.add_argument(
         "--quant_layer_list",
@@ -132,6 +141,14 @@ def parse_arguments(argv=None):
         parser.error("--checkpoint is required")
     if not args.tasks and not args.export_model_path and not args.export_gguf_path:
         parser.error("select at least one action: --tasks, --export_model_path, or --export_gguf_path")
+    if args.gguf_low_memory:
+        if not args.export_gguf_path:
+            parser.error("--gguf_low_memory requires --export_gguf_path")
+        if args.tasks or args.export_model_path:
+            parser.error(
+                "--gguf_low_memory discards the 16-bit weights while packing, so it "
+                "cannot be combined with --tasks or --export_model_path"
+            )
     args.ignored_config_keys = ignored_config_keys
     return args
 
@@ -185,11 +202,20 @@ def main(argv=None):
         from quantize.gguf_export import TernaryGGUFExporter
 
         exporter = TernaryGGUFExporter(
-            args.model, _gguf_outfile(args), float_type=args.gguf_float_type
+            args.model,
+            _gguf_outfile(args),
+            float_type=args.gguf_float_type,
+            low_memory=args.gguf_low_memory,
         )
 
     lm = LMClass(args)
-    merge_catq_checkpoint(lm, args, logger, ternary_sink=exporter.capture if exporter else None)
+    merge_catq_checkpoint(
+        lm,
+        args,
+        logger,
+        ternary_sink=exporter.capture if exporter else None,
+        release_packed_weights=args.gguf_low_memory,
+    )
 
     if args.export_model_path:
         _save_hf_model(lm, Path(args.export_model_path), logger)

@@ -89,6 +89,9 @@ The following W1.58A16 checkpoints are available on Hugging Face:
 | Qwen3-235B-A22B | MoE | [qwen3-moe-235B-A22B](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/qwen3-moe-235B-A22B) |
 
 All checkpoints are hosted under [IntelLabsChina/CAT-Q](https://huggingface.co/IntelLabsChina/CAT-Q).
+Every folder holds the learnable CAT-Q parameters (`parameters.pth`) with the config that
+produced them, plus a ready-to-run packed ternary `*-catq-q2_0.gguf`; see
+[deployment/README.md](deployment/README.md) for how to serve it.
 
 > **Note:** The code was refactored for open-source release, so checkpoint accuracy may differ slightly from the paper results (typically within ±0.2 percentage points).
 

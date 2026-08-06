@@ -61,6 +61,27 @@ Dense (Qwen3, LLaMA) and MoE (Qwen3-MoE) checkpoints are both supported. For MoE
 the per-expert `gate_proj`/`up_proj`/`down_proj` weights are packed and stacked into the
 `ffn_*_exps` tensors the runtime expects, while the router stays in `F32`.
 
+### Very large checkpoints
+
+By default the exporter keeps the whole 16-bit model resident while it packs, which needs
+roughly the size of the original model plus the size of the GGUF. Add `--gguf_low_memory`
+when that does not fit - Qwen3-235B-A22B, for instance, needs it on a 512 GiB host:
+
+```bash
+python main.py \
+  --config configs/qwen3-moe-235B-A22B/config.yaml \
+  --checkpoint configs/qwen3-moe-235B-A22B/parameters.pth \
+  --output_dir configs/qwen3-moe-235B-A22B/export-gguf \
+  --export_gguf_path configs/qwen3-moe-235B-A22B/export-gguf \
+  --gguf_low_memory
+```
+
+Each weight is then dropped as soon as it has been packed and the GGUF is assembled
+through a temporary file (set `TMPDIR` to a filesystem with room for the result), which
+holds host memory to about the size of the packed model. The file is byte-for-byte the
+same as without the flag. Because the 16-bit weights are gone by the time packing ends,
+the flag cannot be combined with `--tasks` or `--export_model_path`.
+
 ## 2. Get a runtime with ternary kernels
 
 The GGUF needs a llama.cpp build with group-128 ternary kernels:

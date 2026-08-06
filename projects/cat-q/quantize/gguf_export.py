@@ -75,6 +75,28 @@ def _permute(tensor, n_head, n_head_kv):
     )
 
 
+def _pin_malloc_thresholds():
+    """Keep glibc handing large blocks back to the kernel.
+
+    The exporter frees a whole decoder layer worth of float tensors on every
+    iteration.  glibc grows its dynamic mmap threshold whenever such a block is
+    released, after which same-sized allocations come from the heap and their
+    memory is never returned, so a long export slowly accumulates hundreds of
+    gigabytes of freed-but-resident memory.  Pinning the threshold disables that
+    heuristic.
+    """
+    import ctypes
+
+    M_MMAP_THRESHOLD = -3
+    M_TRIM_THRESHOLD = -1
+    try:
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
+        libc.mallopt(ctypes.c_int(M_MMAP_THRESHOLD), ctypes.c_int(128 * 1024))
+        libc.mallopt(ctypes.c_int(M_TRIM_THRESHOLD), ctypes.c_int(128 * 1024))
+    except OSError:  # pragma: no cover - non-glibc platforms
+        logger.debug("Could not pin the malloc thresholds; this is glibc-only")
+
+
 class TernaryGGUFExporter:
     """Turn a restored CAT-Q model into a single `Q2_0` GGUF file.
 
@@ -84,12 +106,15 @@ class TernaryGGUFExporter:
     float weights.
     """
 
-    def __init__(self, model_dir, outfile, float_type="f16"):
+    def __init__(self, model_dir, outfile, float_type="f16", low_memory=False):
         if float_type not in FLOAT_TYPES:
             raise ValueError(f"Unknown float type {float_type!r}; expected one of {sorted(FLOAT_TYPES)}")
         self.model_dir = Path(model_dir)
         self.outfile = Path(outfile)
         self.float_type = FLOAT_TYPES[float_type]
+        self.low_memory = low_memory
+        if low_memory:
+            _pin_malloc_thresholds()
         # AutoConfig rather than raw config.json: llama.cpp reads the same
         # normalised view, so defaults such as `head_dim` and `rope_theta` are
         # filled in for older checkpoints that omit them.
@@ -110,22 +135,33 @@ class TernaryGGUFExporter:
 
         self.qtype_q2_0 = register_q2_0()
         self.tensor_map = gguf.get_tensor_name_map(self.arch.arch, self.block_count)
-        self.writer = gguf.GGUFWriter(path=None, arch=self.arch.name)
+        # In low-memory mode the packed bytes are spooled to a temporary file as
+        # soon as they are handed to the writer, so only one tensor at a time has
+        # to be resident while the GGUF is being assembled.
+        self.writer = gguf.GGUFWriter(path=None, arch=self.arch.name, use_temp_file=low_memory)
         self.packed = {}  # hf weight name -> packed uint8 array
+        self.n_packed = 0
 
     # ------------------------------------------------------------------
     # collection
     # ------------------------------------------------------------------
     @torch.no_grad()
     def capture(self, layer_id, qlayer):
-        """Pack every ternary projection of one restored decoder layer."""
-        count = 0
+        """Pack every ternary projection of one restored decoder layer.
+
+        Returns the Hugging Face weight names that were packed, so that the
+        caller can drop the corresponding floating-point weights (see
+        `quantize.merge`).
+        """
+        names = []
         for name, ternary in iter_layer_ternary(layer_id, qlayer):
             codes = ternary.codes.cpu().numpy()
             scales = ternary.scales.cpu().numpy().reshape(codes.shape[:-1] + (-1,))
             self.packed[name] = self._pack(name, codes, scales)
-            count += 1
-        logger.info("Packed %d ternary tensors from layer %d", count, layer_id)
+            names.append(name)
+        self.n_packed += len(names)
+        logger.info("Packed %d ternary tensors from layer %d", len(names), layer_id)
+        return names
 
     def _pack(self, name, codes, scales):
         """Pack one weight, undoing the LLaMA q/k row interleaving if needed.
@@ -372,7 +408,7 @@ class TernaryGGUFExporter:
             if slot is not None:
                 merged, index = slot
                 bucket = experts.setdefault(merged, {})
-                bucket[index] = self.packed.get(name)
+                bucket[index] = self.packed.pop(name, None)
                 if bucket[index] is None:
                     bucket[index] = tensor
                 if len(bucket) < self.hparams["num_experts"]:
@@ -380,25 +416,30 @@ class TernaryGGUFExporter:
                 stacked = [bucket[i] for i in range(self.hparams["num_experts"])]
                 new_name = self._gguf_name(merged)
                 if isinstance(stacked[0], np.ndarray):
-                    self.writer.add_tensor(new_name, np.stack(stacked), raw_dtype=self.qtype_q2_0)
                     n_ternary += len(stacked)
+                    stacked = np.stack(stacked)
+                    del experts[merged], bucket
+                    self.writer.add_tensor(new_name, stacked, raw_dtype=self.qtype_q2_0)
+                    del stacked
                 else:
                     self._add_float_tensor(new_name, torch.stack(stacked))
-                del experts[merged]
+                    del experts[merged]
                 continue
 
             new_name = self._gguf_name(name)
             if name in self.packed:
-                self.writer.add_tensor(new_name, self.packed[name], raw_dtype=self.qtype_q2_0)
+                self.writer.add_tensor(new_name, self.packed.pop(name), raw_dtype=self.qtype_q2_0)
                 n_ternary += 1
             else:
                 self._add_float_tensor(new_name, tensor)
 
         if experts:
             raise RuntimeError(f"Incomplete expert groups: {sorted(experts)}")
-        if n_ternary != len(self.packed):
-            missing = sorted(set(self.packed) - set(state_dict))
-            raise RuntimeError(f"{len(missing)} captured ternary tensors are absent from the model: {missing[:4]}")
+        if n_ternary != self.n_packed:
+            raise RuntimeError(
+                f"{self.n_packed - n_ternary} captured ternary tensors are absent from the model: "
+                f"{sorted(self.packed)[:4]}"
+            )
 
         self._write_metadata()
         self.writer.write_header_to_file(path=self.outfile)
