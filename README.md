@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="images/logo.png" alt="BitTern logo" width="220">
+  <img src="images/BitTern_logo.png" alt="BitTern logo" width="220">
 
   <h3>An Open Toolkit for Post-Training Ternary Quantization: Research, Models, and Systems.</h3>
 
