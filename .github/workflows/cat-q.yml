@@ -1,6 +1,6 @@
 name: CAT-Q checks
 
-on:
+on: 
   push:
     branches:
       - main
