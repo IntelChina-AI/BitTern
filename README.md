@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="images/logo.png" alt="BitTern logo" width="220">
+  <img src="images/BitTern_logo.png" alt="BitTern logo" width="220">
 
   <h3>An Open Toolkit for Post-Training Ternary Quantization: Research, Models, and Systems.</h3>
 
@@ -17,12 +17,12 @@
 
 | Project | Venue | Public Release |
 | --- | --- | --- |
-| [CAT-Q](projects/cat-q) | ICML 2026 Oral | Model checkpoints (Qwen3-1.7B to Qwen3-235B-A22B), inference, evaluation, and packed ternary deployment code |
+| [CAT-Q](projects/cat-q) | ICML 2026 Oral | Model checkpoints, inference, evaluation, and packed ternary deployment code |
 
 ## Latest News
 
-- `[Stay tuned]` We are preparing to release the CAT-Q training code, etc. 
-- `[04/08/2026]` [The technical report](https://arxiv.org/abs/2608.01078) "**Attend to Your Own Thoughts: Breaking the Barrier for Post-Training Quantization of Reasoning LLMs through the Lens of 1.58-Bit Quantization**" is now available on arXiv.
-- `[22/07/2026]` 🎉🎉🎉The [CAT-Q](projects/cat-q) model checkpoints, **scaling from Qwen3-1.7B all the way to Qwen3-235B-A22B** (Qwen3-1.7B/4B/8B/14B/32B, Llama2-7B, Qwen3-30B-A3B and Qwen3-235B-A22B), inference, evaluation, and **real ternary deployment** code are now available.
-- `[25/06/2026]` [The CAT-Q paper](https://arxiv.org/abs/2606.26650) is now available on arXiv.
-- `[01/05/2026]` 🎉🎉🎉Our paper "**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs**" is accepted to **ICML 2026 as an oral**. The project page for our sliding-layer reconstruction framework used in CAT-Q is available at [SliderQuant (ICLR 2026)](https://github.com/deep-optimization/SliderQuant).
+<!-- `[Stay tuned]` We are preparing to release the CAT-Q training code, etc. -->
+- `[04/08/2026]` 🔥 [The technical report of ScaleQ-1.58](https://arxiv.org/abs/2608.01078) "**Attend to Your Own Thoughts: Breaking the Barrier for Post-Training Quantization of Reasoning LLMs through the Lens of 1.58-Bit Quantization**" is now available on arXiv.
+- `[22/07/2026]` 🚀 [The CAT-Q model checkpoints](projects/cat-q) (including Qwen3-1.7B/4B/8B/14B/32B, Llama2-7B, Qwen3-30B-A3B and Qwen3-235B-A22B), inference, evaluation, and **real ternary deployment** code are now available.
+- `[25/06/2026]` 🔥 [The CAT-Q paper](https://arxiv.org/abs/2606.26650) is now available on arXiv.
+- `[01/05/2026]` 🎉Our paper "**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs**" is accepted to **ICML 2026 as an oral**. The project page for our sliding-layer reconstruction framework used in CAT-Q is available at [SliderQuant (ICLR 2026)](https://github.com/deep-optimization/SliderQuant).

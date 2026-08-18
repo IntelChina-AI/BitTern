@@ -11,7 +11,7 @@
   <a href="https://huggingface.co/IntelLabsChina/CAT-Q"><img src="https://img.shields.io/badge/Hugging%20Face-Models-FFD21E.svg" alt="Hugging Face"></a>
 </p>
 
-This repository contains the official implementation of **CAT-Q**, accepted as an **ICML 2026 Oral**. CAT-Q converts pretrained LLMs into accurate ternary models through post-training quantization, without costly quantization-aware training.
+This repository contains the official implementation of **CAT-Q (ICML 2026 Oral)**. CAT-Q converts pretrained LLMs into accurate ternary models through post-training quantization, without costly quantization-aware training.
 
 ## Latest News
 
