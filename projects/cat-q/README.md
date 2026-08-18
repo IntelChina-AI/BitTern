@@ -15,10 +15,11 @@ This repository contains the official implementation of **CAT-Q (ICML 2026 Oral)
 
 ## Latest News
 
-- `[Stay tuned]` We are preparing to release the CAT-Q training code.
-- `[22/07/2026]` We release the CAT-Q model checkpoints, inference, and evaluation code.
-- `[25/06/2026]` The [CAT-Q paper](https://arxiv.org/abs/2606.26650) is available on arXiv.
-- `[01/05/2026]` 🎉🎉🎉**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs** is accepted to ICML 2026 as an oral.
+- `[Stay tuned]` We are preparing to release the CAT-Q training code, etc. 
+- `[04/08/2026]` [The technical report](https://arxiv.org/abs/2608.01078) "**Attend to Your Own Thoughts: Breaking the Barrier for Post-Training Quantization of Reasoning LLMs through the Lens of 1.58-Bit Quantization**" is now available on arXiv.
+- `[22/07/2026]` 🎉🎉🎉The CAT-Q model checkpoints, **scaling from Qwen3-1.7B all the way to Qwen3-235B-A22B** (Qwen3-1.7B/4B/8B/14B/32B, Llama2-7B, Qwen3-30B-A3B and Qwen3-235B-A22B), inference, evaluation, and **real ternary deployment** code are now available.
+- `[25/06/2026]` [The CAT-Q paper](https://arxiv.org/abs/2606.26650) is now available on arXiv.
+- `[01/05/2026]` 🎉🎉🎉Our paper "**CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs**" is accepted to **ICML 2026 as an oral**. The project page for our sliding-layer reconstruction framework used in CAT-Q is available at [SliderQuant (ICLR 2026)](https://github.com/deep-optimization/SliderQuant).
 
 ## Overview
 
@@ -49,6 +50,7 @@ Using only 512 calibration samples, CAT-Q scales W1.58 quantization from 1.7B de
 - [Installation](#installation)
 - [Evaluation](#evaluation)
 - [Hugging Face Export](#hugging-face-export)
+- [Packed Ternary Deployment](#packed-ternary-deployment)
 - [Citation](#citation)
 - [Acknowledgement](#acknowledgement)
 - [License](#license)
@@ -87,6 +89,9 @@ The following W1.58A16 checkpoints are available on Hugging Face:
 | Qwen3-235B-A22B | MoE | [qwen3-moe-235B-A22B](https://huggingface.co/IntelLabsChina/CAT-Q/tree/main/qwen3-moe-235B-A22B) |
 
 All checkpoints are hosted under [IntelLabsChina/CAT-Q](https://huggingface.co/IntelLabsChina/CAT-Q).
+Every folder holds the learnable CAT-Q parameters (`parameters.pth`) with the config that
+produced them, plus a ready-to-run packed ternary `*-catq-q2_0.gguf`; see
+[deployment/README.md](deployment/README.md) for how to serve it.
 
 > **Note:** The code was refactored for open-source release, so checkpoint accuracy may differ slightly from the paper results (typically within ±0.2 percentage points).
 
@@ -137,6 +142,16 @@ Export the restored model as a fake-quantized Hugging Face model:
 
 The exported model retains the original Hugging Face architecture and stores merged fake-quantized floating-point weights; it is not a packed ternary checkpoint.
 
+## Packed Ternary Deployment
+
+Export the restored model as a packed ternary GGUF, where each quantized weight occupies 2 bits next to one fp16 scale per group of 128:
+
+```bash
+./export_gguf.sh
+```
+
+Conversion is self-contained: it reads the checkpoint and writes the GGUF, with no intermediate model and no inference runtime involved. The result runs on the ternary kernels of the [Bonsai](https://github.com/PrismML-Eng/Bonsai-demo) runtime, with real weight compression rather than fake quantization. See [`deployment/README.md`](deployment/README.md) for the full export-and-serve walkthrough.
+
 ## Citation
 
 If CAT-Q is useful in your research, please cite:
@@ -152,7 +167,7 @@ If CAT-Q is useful in your research, please cite:
 
 ## Acknowledgement
 
-CAT-Q is implemented based on [SliderQuant](https://github.com/deep-optimization/SliderQuant).
+CAT-Q is implemented based on [SliderQuant](https://github.com/deep-optimization/SliderQuant). Packed ternary deployment builds on the group-128 ternary kernels of [Bonsai](https://github.com/PrismML-Eng/Bonsai-demo) and its [llama.cpp fork](https://github.com/PrismML-Eng/llama.cpp).
 
 ## License
 

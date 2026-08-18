@@ -1,5 +1,7 @@
 """Checkpoint restoration and one-way merging for released CAT-Q parameters."""
 
+import gc
+
 import torch
 
 from quantize.checkpoint import load_catq_parameters
@@ -99,6 +101,38 @@ def _native_layer_state(qlayer, native_layer):
     return {name: value for name, value in merged.items() if name in expected}
 
 
+def _resident_gib():
+    """Anonymous resident memory of this process, for the low-memory export log.
+
+    File-backed pages are left out on purpose: the memory-mapped shards the
+    loader hands out are reclaimable, so only anonymous memory can push the
+    export into the out-of-memory killer.
+    """
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("RssAnon:"):
+                    return int(line.split()[1]) / 1024 ** 2
+    except OSError:
+        pass
+    return float("nan")
+
+
+def _release_weights(model, names, dtype):
+    """Drop the references to weights that are already packed.
+
+    The names stay in `state_dict()` so the exporter can still map them onto
+    GGUF tensor names, but the model no longer pins the memory-mapped shards
+    they were read from.
+    """
+    for name in names:
+        module_path, _, attribute = name.rpartition(".")
+        module = model.get_submodule(module_path)
+        module._parameters[attribute] = torch.nn.Parameter(
+            torch.empty(0, dtype=dtype), requires_grad=False
+        )
+
+
 def _filter_inert_quantizer_bounds(layer_parameters, qlayer):
     expected = qlayer.state_dict()
     filtered = {}
@@ -120,11 +154,21 @@ def _filter_inert_quantizer_bounds(layer_parameters, qlayer):
 
 
 @torch.no_grad()
-def merge_catq_checkpoint(lm, args, logger):
-    """Restore released per-layer parameters and merge them into native HF weights."""
-    if args.use_scaling and args.export_model_path:
+def merge_catq_checkpoint(lm, args, logger, ternary_sink=None, release_packed_weights=False):
+    """Restore released per-layer parameters and merge them into native HF weights.
+
+    `ternary_sink(layer_id, qlayer)` is called for every restored layer just
+    before its weights are folded into floating point, which is the only point
+    where the ternary codes and per-group scales are still available (see
+    `quantize.ternary_export`).  It may return the weight names it consumed;
+    with `release_packed_weights` those floating-point weights are then dropped
+    from the model, which keeps peak host memory close to the size of the packed
+    result rather than the size of the 16-bit model.  The merged model is then
+    only good for the packed export.
+    """
+    if args.use_scaling and (args.export_model_path or ternary_sink is not None):
         raise ValueError(
-            "Native Hugging Face export currently requires use_scaling: false; "
+            "Model export currently requires use_scaling: false; "
             "equivalent-scaling checkpoints remain supported for evaluation."
         )
     _set_quantizer_options(args)
@@ -177,15 +221,37 @@ def merge_catq_checkpoint(lm, args, logger):
             )
 
         qlayer.float()
+        captured = ternary_sink(layer_id, qlayer) if ternary_sink is not None else None
         qlayer.update_quant_mode("weight_merge", args=args)
         if args.use_scaling:
             layers[layer_id] = qlayer.to(dtype=dtype)
         else:
-            native_layer.load_state_dict(
-                _native_layer_state(qlayer, native_layer),
-                strict=False,
-            )
+            merged_state = _native_layer_state(qlayer, native_layer)
+            if release_packed_weights and captured:
+                # The packed bytes already carry these weights, and writing the
+                # merged floats back would fault in a private copy of every
+                # memory-mapped page the loader handed out.
+                prefix = f"model.layers.{layer_id}."
+                packed_names = {name[len(prefix):] for name in captured}
+                merged_state = {
+                    name: value
+                    for name, value in merged_state.items()
+                    if name not in packed_names
+                }
+            native_layer.load_state_dict(merged_state, strict=False)
             layers[layer_id] = native_layer.to(dtype=dtype)
+        if release_packed_weights and captured:
+            del qlayer
+            _release_weights(lm.model, captured, dtype)
+            del parameters[layer_id]
+            gc.collect()
+            logger.info(
+                "Merged CAT-Q parameters into layer %d (packed %d weights, host memory %.1f GiB)",
+                layer_id,
+                len(captured),
+                _resident_gib(),
+            )
+            continue
         logger.info("Merged CAT-Q parameters into layer %d", layer_id)
 
     lm.model.to(dtype=dtype)
